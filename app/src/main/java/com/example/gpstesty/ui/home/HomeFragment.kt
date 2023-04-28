@@ -1,13 +1,17 @@
 package com.example.gpstesty.ui.home
 
+import android.annotation.SuppressLint
+import android.app.Activity
 import android.app.AlertDialog
+import android.content.ContentResolver
 import android.content.ContentValues.TAG
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.icu.text.Transliterator.Position
 import android.location.Location
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -16,32 +20,34 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.constraintlayout.motion.widget.Debug.getLocation
-import androidx.core.content.ContextCompat
+import androidx.documentfile.provider.DocumentFile
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-//import com.example.gpstesty.Manifest
-import com.example.gpstesty.utils.FileUtilsss
-import android.Manifest
-
 import com.example.gpstesty.R
 import com.example.gpstesty.databinding.FragmentHomeBinding
+import com.example.gpstesty.utils.FileUtilsss
 import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
-import java.util.concurrent.Executors
+
 
 class HomeFragment : Fragment() {
+
     private lateinit var viewModel: HomeViewModel
     lateinit var gpsObserver: Location
+    private val REQUEST_EXTERNAL_STORAGE = 1
+    //read
+    var idLastLine: Number? = null
     //MODE THUS WITH SharedPreferences TO GET PERMANENT DATA
       var selectedFile: File? = null
+    var myFilePath: String?=null
 //    private var selectedFile = (activity as MainActivity).selectedFile
     private var _binding: FragmentHomeBinding? = null
-
-    // This property is only valid between onCreateView and
-    // onDestroyView.
     private val binding get() = _binding!!
 
     override fun onCreateView(
@@ -57,9 +63,6 @@ class HomeFragment : Fragment() {
         val root: View = binding.root
 
         val textView: TextView = binding.textHome
-//        homeViewModel.text.observe(viewLifecycleOwner) {
-//            textView.text = it
-//        }
         homeViewModel.location.observe(viewLifecycleOwner) {
             gpsObserver = it
             var latitude = it.latitude
@@ -70,6 +73,7 @@ class HomeFragment : Fragment() {
         return root
     }
 
+    @SuppressLint("SetTextI18n")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
@@ -88,17 +92,26 @@ class HomeFragment : Fragment() {
             // Verifica se o arquivo foi selecionado
             selectedFile?.let { file ->
 
-                // Cria a nova linha a ser adicionada no arquivo
-                //falta cria uma linha apenas com valores
-//                    val newLine = "latitude ${gpsObserver.latitude}, logintude ${gpsObserver.longitude}, acurracy ${gpsObserver.accuracy}, time ${gpsObserver.time}, altitude ${gpsObserver.altitude} "
+                var lastId: Int
+               try {
+                    lastId= file.readLines().lastOrNull()?.split(",")?.last()?.toIntOrNull() ?: 0
+               } catch (e: Exception){
+                   Toast.makeText(requireContext(), "Seletor Erro ao adicionar linha seletor $file", Toast.LENGTH_SHORT).show()
+                   Toast.makeText(requireContext(), "$file", Toast.LENGTH_LONG).show()
+                   lastId=0
+               }
 
-                // Executa a escrita do arquivo em uma nova thread
-                val executor = Executors.newSingleThreadExecutor()
-                executor.execute {
+                CoroutineScope(Dispatchers.IO).launch {
+
                     try {
                         // Abre o arquivo para escrita e adiciona a nova linha
+                        val newId = synchronized(this) { ++lastId }
                         val fileWriter = FileWriter(file, true)
-                        fileWriter.write("$newLine\n")
+                        val bufferWriter= BufferedWriter(fileWriter)
+                        bufferWriter.write(newLine)
+                        bufferWriter.write(",${newId}")
+                        bufferWriter.newLine()
+                        bufferWriter.close()
                         fileWriter.close()
 
                         // Exibe uma mensagem de sucesso em caso de escrita bem-sucedida
@@ -108,10 +121,10 @@ class HomeFragment : Fragment() {
                     } catch (e: Exception) {
                         // Exibe uma mensagem de erro em caso de falha na escrita
                         Log.e(TAG, "Error writing to file", e)
-                        activity?.runOnUiThread {
+//                        activity?.runOnUiThread {
                             Toast.makeText(requireContext(), "Erro ao adicionar linha $file", Toast.LENGTH_SHORT).show()
                             Toast.makeText(requireContext(), "$file", Toast.LENGTH_LONG).show()
-                        }
+//                        }
                     }
                 }
             } ?: run {
@@ -122,36 +135,51 @@ class HomeFragment : Fragment() {
         }
         createFileButton.setOnClickListener{
 //            val file = FileUtilsss().createFile()
+
             selectedFile = FileUtilsss().createFile()
+
                 selectedFileTextView.text="Arquivo selecionado: ${selectedFile?.name}"
             //criando a primeira linha de colunas com os dados
 
-            val data = "latitude,logintude,acurracy,time,altitude"
+            val data = "latitude,logintude,acurracy,time,altitude,id"
             writeTxt(data)
 
         }
-
+        fun ContentResolver.getFilePath(uri: Uri):String? {
+            val projection = arrayOf(MediaStore.MediaColumns.DATA)
+            val cursor= query(uri, projection, null, null, null) ?: return null
+            val columnIndex = cursor.getColumnIndexOrThrow(MediaStore.MediaColumns.DATA)
+            cursor.moveToFirst()
+            val path= cursor.getString(columnIndex)
+            cursor.close()
+            return path
+        }
 
         ////select a file
-         val chooseFile = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-            uri?.let {
-                selectedFile = File(uri.path)
-                    selectedFileTextView.text = selectedFile?.name
-            }
+         val chooseFile = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+             if(result.resultCode== Activity.RESULT_OK){
+                 val uri = result.data?.data
+                 if(uri!=null){
+                     val contentResolver = requireActivity().contentResolver
+                     val documentFile= DocumentFile.fromSingleUri(requireContext(), uri)
+                     selectedFile = documentFile?.uri?.let{contentResolver.getFilePath(it)}
+                         ?.let { File(it) }
+                     selectedFileTextView.text="S2 Arquivo selecionado: ${selectedFile?.name}"
+                 }
+             }
         }
 
          fun selectFile() {
             val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-//                type = "*/*"
                 type ="text/plain"
             }
-//            chooseFile.launch(intent.toString())
-             chooseFile.launch(intent.toString())
+             chooseFile.launch(intent)
         }
 
         val selectFileButton: Button = view.findViewById(R.id.selectFileButton)
         selectFileButton.setOnClickListener {
             selectFile()
+//            selectedFileTextView.text="Arquivo selecionado: ${selectedFile?.name}"
 
         }
         ////
@@ -160,45 +188,8 @@ class HomeFragment : Fragment() {
         val addToLineToFileButton: Button = view.findViewById(R.id.addNewLineButton)
 
         addToLineToFileButton.setOnClickListener {
-
-            // Verifica se o arquivo foi selecionado
-//            val data = "latitude ${gpsObserver.latitude}, logintude ${gpsObserver.longitude}, acurracy ${gpsObserver.accuracy}, time ${gpsObserver.time}, altitude ${gpsObserver.altitude} "
             val data = "${gpsObserver.latitude},${gpsObserver.longitude},${gpsObserver.accuracy},${gpsObserver.time},${gpsObserver.altitude}"
             writeTxt(data)
-//            selectedFile?.let { file ->
-//
-//                // Cria a nova linha a ser adicionada no arquivo
-//                //falta cria uma linha apenas com valores
-//                val newLine = "latitude ${gpsObserver.latitude}, logintude ${gpsObserver.longitude}, acurracy ${gpsObserver.accuracy}, time ${gpsObserver.time}, altitude ${gpsObserver.altitude} "
-//
-//                // Executa a escrita do arquivo em uma nova thread
-//                val executor = Executors.newSingleThreadExecutor()
-//                executor.execute {
-//                    try {
-//                        // Abre o arquivo para escrita e adiciona a nova linha
-//                        val fileWriter = FileWriter(file, true)
-//                        fileWriter.write("$newLine\n")
-//                        fileWriter.close()
-//
-//                        // Exibe uma mensagem de sucesso em caso de escrita bem-sucedida
-//                        activity?.runOnUiThread {
-//                            Toast.makeText(requireContext(), "Linha adicionada com sucesso", Toast.LENGTH_SHORT).show()
-//                        }
-//                    } catch (e: Exception) {
-//                        // Exibe uma mensagem de erro em caso de falha na escrita
-//                        Log.e(TAG, "Error writing to file", e)
-//                        activity?.runOnUiThread {
-//                            Toast.makeText(requireContext(), "Erro ao adicionar linha $file", Toast.LENGTH_SHORT).show()
-//                            Toast.makeText(requireContext(), "$file", Toast.LENGTH_LONG).show()
-//                        }
-//                    }
-//                }
-//            } ?: run {
-//                // Exibe uma mensagem de erro caso o arquivo não tenha sido selecionado
-//                Toast.makeText(requireContext(), "Selecione um arquivo antes de adicionar uma linha", Toast.LENGTH_SHORT).show()
-//            }
-
-
 
         }
 
@@ -211,55 +202,12 @@ class HomeFragment : Fragment() {
                 .show()
             return
         }
-
-
-
-
-    //////
-
-
-
     }
-
-
-
-
-//////////
-
-
-
-    //////////
 
     override fun onResume() {
         super.onResume()
         viewModel.startLocationUpdates()
-////        viewModel.onRequestPermissionsResult()
-//        super.onResume()
-//        // Verifica se a permissão de localização foi concedida
-//        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION)
-//            == PackageManager.PERMISSION_GRANTED) {
-//            // Permissão concedida, obtém a localização
-//            getLocation()
-//        } else {
-//            // Permissão não concedida, solicita permissão
-//            requestLocationPermission()
-//        }
     }
-//    private fun requestLocationPermission() {
-//        val requestPermissionLauncher = registerForActivityResult(
-//            ActivityResultContracts.RequestPermission()
-//        ) { isGranted ->
-//            if (isGranted) {
-//                // PERMISSION GRANTED
-//
-//            } else {
-//                Toast.makeText(requireContext(), "Selecione um arquivo antes de adicionar uma linha", Toast.LENGTH_SHORT).show()
-//                // PERMISSION NOT GRANTED
-//            }
-//        }
-//        requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-////        requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_LOCATION_PERMISSION)
-//    }
 
     override fun onPause() {
         super.onPause()
@@ -274,4 +222,20 @@ class HomeFragment : Fragment() {
         super.onDestroyView()
         _binding = null
     }
+////
+//    override fun onSaveInstanceState(outState: Bundle) {
+////        outState.putParcelable("myLocation",gpsObserver)
+//
+//        super.onSaveInstanceState(outState)
+//        outState.putSerializable("myFilePath",selectedFile?.absolutePath)
+//    }
+//
+//    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+//    override fun onViewStateRestored(savedInstanceState: Bundle?) {
+//        super.onViewStateRestored(savedInstanceState)
+////     selectedFile= savedInstanceState?.getSerializable("myFilePath") as? File
+//        myFilePath= savedInstanceState?.getString("myFilePath")
+//        selectedFile = myFilePath?.let{File(it)}
+//
+//    }
 }
