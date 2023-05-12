@@ -12,6 +12,7 @@ import java.text.SimpleDateFormat
 
 class FileUtilsss {
     fun createFile(): File? {
+        val folder2 = Environment.getRootDirectory()
         val folder = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         if (!folder.exists()) {
             folder.mkdir()
