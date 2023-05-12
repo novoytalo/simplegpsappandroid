@@ -17,7 +17,7 @@ Thumbs.db
 *.iml
 .gradle/
 /local.properties
-
+./../local.properties
 # Dependências do Maven
 /.m2/
 
@@ -28,7 +28,6 @@ Thumbs.db
 
 # Arquivos de compilação nativa
 /local.properties
-../gradle.properties
 /cmake/
 /externalNativeBuild/
 
