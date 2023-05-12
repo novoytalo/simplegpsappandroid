@@ -28,6 +28,7 @@ Thumbs.db
 
 # Arquivos de compilação nativa
 /local.properties
+../gradle.properties
 /cmake/
 /externalNativeBuild/
 
