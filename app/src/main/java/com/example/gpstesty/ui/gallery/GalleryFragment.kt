@@ -9,7 +9,7 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.example.gpstesty.databinding.FragmentGalleryBinding
 
-
+//test 255 gradle.properties out from github TEST
 class GalleryFragment : Fragment() {
 
     private var _binding: FragmentGalleryBinding? = null
