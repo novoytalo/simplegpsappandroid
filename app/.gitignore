@@ -2,40 +2,49 @@
 /local.properties
 local.properties
 
-#built application files
-*.apk
-*.ap_
-*.aab
+# Arquivos de configuração do Android Studio
+.idea/
 
-# files for the dex VM
-*.dex
+# Arquivos gerados pelo build do Gradle
+.gradle/
+/build/
 
-# Java class files
-*.class
-
-# generated files
-bin/
-gen/
-
-# Local configuration file (sdk path, etc)
-local.properties
-
-# Windows thumbnail db
+# Arquivos do sistema operacional
+.DS_Store
 Thumbs.db
 
-# OSX files
-.DS_Store
-
-# Android Studio
+# Arquivos de configuração do projeto específicos do usuário
 *.iml
-.idea
-#.idea/workspace.xml - remove # and delete .idea if it better suit your needs.
-.gradle
-build/
-.navigation
-captures/
-output.json
+.gradle/
+/local.properties
 
-#NDK
-obj/
-.externalNativeBuild
+# Dependências do Maven
+/.m2/
+
+# Logs e arquivos de relatório
+/log/
+/captures/
+/profiler/
+
+# Arquivos de compilação nativa
+/local.properties
+/cmake/
+/externalNativeBuild/
+
+# Arquivos de backup
+*.bak
+*.swp
+*~
+
+# Arquivos de configuração específicos do IDE
+*.xml
+
+# Arquivos de compilação do Visual Studio Code
+.vscode/
+
+# Arquivos de compilação do IntelliJ IDEA
+*.iws
+*.ipr
+*.ids
+*.pid
+*.fallbackToOldGitIgnores
