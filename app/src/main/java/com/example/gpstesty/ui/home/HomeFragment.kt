@@ -46,7 +46,7 @@ import java.util.concurrent.Semaphore
 
 
 class HomeFragment : Fragment() {
-    val initialUri: Uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+    var initialUri: Uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
     private lateinit var viewModel: HomeViewModel
     lateinit var gpsObserver: Location
     private val REQUEST_EXTERNAL_STORAGE = 1
@@ -91,17 +91,17 @@ class HomeFragment : Fragment() {
     }
 
 
-    private val multiplePermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        val grantedPermissions = permissions.entries.filter { it.value }.map { it.key }
-        val deniedPermissions = permissions.entries.filter { !it.value }.map { it.key }
-
-        if (grantedPermissions.isNotEmpty()) {
-            viewModel.startLocationUpdates()
-        }
-        if (deniedPermissions.isNotEmpty()) {
-            Log.d(TAG, "Permissões negadas: $deniedPermissions")
-        }
-    }
+//    private val multiplePermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+//        val grantedPermissions = permissions.entries.filter { it.value }.map { it.key }
+//        val deniedPermissions = permissions.entries.filter { !it.value }.map { it.key }
+//
+//        if (grantedPermissions.isNotEmpty()) {
+//            viewModel.startLocationUpdates()
+//        }
+//        if (deniedPermissions.isNotEmpty()) {
+//            Log.d(TAG, "Permissões negadas: $deniedPermissions")
+//        }
+//    }
 
 
     private fun requestLocationPermission() {
@@ -171,6 +171,9 @@ class HomeFragment : Fragment() {
                         try {
                             lastId= file.readLines().lastOrNull()?.split(",")?.last()?.toIntOrNull() ?: 0
                         } catch (e: Exception){
+                            val errorMessage = "Seletor Erro ao adicionar linha seletor $file: ${e.message}"
+                            Log.e("Seletor", errorMessage)
+                            Log.e("Seletor", file.toString())
                             Toast.makeText(requireContext(), "Seletor Erro ao adicionar linha seletor $file", Toast.LENGTH_SHORT).show()
                             Toast.makeText(requireContext(), "$file", Toast.LENGTH_LONG).show()
                             lastId=0
@@ -362,10 +365,14 @@ class HomeFragment : Fragment() {
                         val fileName = getFileName(uri)
                         if (fileName != null) {
                             val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-                            val selectedFile = File(downloadsDir, fileName)
-                            selectedFile.outputStream().use { fileOutputStream ->
-                                inputStream.copyTo(fileOutputStream)
-                            }
+
+//                            val selectedFile = File(downloadsDir, fileName)
+                            selectedFile = File(downloadsDir, fileName)
+
+                            //delete the txt content
+//                            selectedFile!!.outputStream().use { fileOutputStream ->
+//                                inputStream.copyTo(fileOutputStream)
+//                            }
                             selectedFileTextView.text = "Arquivo selecionado: $fileName"
 
                         } else {
@@ -391,6 +398,9 @@ class HomeFragment : Fragment() {
         val selectFileButton: Button = view.findViewById(R.id.selectFileButton)
         selectFileButton.setOnClickListener {
             selectFile()
+            //move selectFile to utils...
+//            FileUtilsss().chooseFile(this)
+
         }
 
         val addToLineToFileButton: Button = view.findViewById(R.id.addNewLineButton)
