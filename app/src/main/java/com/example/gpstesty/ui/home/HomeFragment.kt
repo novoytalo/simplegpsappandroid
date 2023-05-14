@@ -49,9 +49,6 @@ class HomeFragment : Fragment() {
     var initialUri: Uri = MediaStore.Files.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
     private lateinit var viewModel: HomeViewModel
     lateinit var gpsObserver: Location
-    private val REQUEST_EXTERNAL_STORAGE = 1
-    //read
-    var idLastLine: Number? = null
     //MODE THUS WITH SharedPreferences TO GET PERMANENT DATA
      private var selectedFile: File? = null
     var myFilePath: String?=null
@@ -91,18 +88,6 @@ class HomeFragment : Fragment() {
     }
 
 
-//    private val multiplePermissionsLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-//        val grantedPermissions = permissions.entries.filter { it.value }.map { it.key }
-//        val deniedPermissions = permissions.entries.filter { !it.value }.map { it.key }
-//
-//        if (grantedPermissions.isNotEmpty()) {
-//            viewModel.startLocationUpdates()
-//        }
-//        if (deniedPermissions.isNotEmpty()) {
-//            Log.d(TAG, "Permissões negadas: $deniedPermissions")
-//        }
-//    }
-
 
     private fun requestLocationPermission() {
         val permission = Manifest.permission.ACCESS_FINE_LOCATION
@@ -120,7 +105,64 @@ class HomeFragment : Fragment() {
         }
     }
 
+    private fun  writeTxt(newLine:String){
+        // Verifica se o arquivo foi selecionado
+        selectedFile?.let { file ->
+            CoroutineScope(Dispatchers.IO).launch {
+                activity?.runOnUiThread{
+                    semaphore.acquire()
+                    var lastId: Int =0
 
+                    try {
+                        lastId= file.readLines().lastOrNull()?.split(",")?.last()?.toIntOrNull() ?: 0
+                    } catch (e: Exception){
+                        val errorMessage = "Seletor Erro ao adicionar linha seletor $file: ${e.message}"
+                        Log.e("Seletor", errorMessage)
+                        Log.e("Seletor", file.toString())
+                        Toast.makeText(requireContext(), "Seletor Erro ao adicionar linha seletor $file", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "$file", Toast.LENGTH_LONG).show()
+                        lastId=0
+                    }
+                    try {
+                        // Abre o arquivo para escrita e adiciona a nova linha
+                        val newId = synchronized(this) { ++lastId }
+
+                        val fileWriter = FileWriter(file, true)
+                        val bufferWriter= BufferedWriter(fileWriter)
+                        bufferWriter.write(newLine)
+                        val lines = file.readLines()
+                        if(lines.isNotEmpty()){
+                            bufferWriter.write(",${newId}")
+                        }
+
+                        bufferWriter.newLine()
+                        bufferWriter.flush()
+                        bufferWriter.close()
+                        fileWriter.close()
+                        // Exibe uma mensagem de sucesso em caso de escrita bem-sucedida
+                        activity?.runOnUiThread {
+                            Toast.makeText(requireContext(), "Linha adicionada com sucesso", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(requireContext(), file.toString(), Toast.LENGTH_SHORT).show()
+                        }
+
+                    } catch (e: Exception) {
+                        // Exibe uma mensagem de erro em caso de falha na escrita
+                        Log.e(TAG, "Error writing to file", e)
+//                        activity?.runOnUiThread {
+                        Toast.makeText(requireContext(), "Erro ao adicionar linha $file", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(), "$file", Toast.LENGTH_LONG).show()
+//                        }
+                    } finally {
+                        semaphore.release()
+                    }
+                }
+            }
+        } ?: run {
+            // Exibe uma mensagem de erro caso o arquivo não tenha sido selecionado
+            Toast.makeText(requireContext(), "Selecione um arquivo antes de adicionar uma linha", Toast.LENGTH_SHORT).show()
+        }
+
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -160,129 +202,10 @@ class HomeFragment : Fragment() {
         //create a file
         val createFileButton: Button = view.findViewById(R.id.createFileButton)
         val selectedFileTextView: TextView = view.findViewById(R.id.selectedFileTextView)
-        fun  writeTxt(newLine:String){
-            // Verifica se o arquivo foi selecionado
-            selectedFile?.let { file ->
-                CoroutineScope(Dispatchers.IO).launch {
-                    activity?.runOnUiThread{
-                        semaphore.acquire()
-                        var lastId: Int =0
-
-                        try {
-                            lastId= file.readLines().lastOrNull()?.split(",")?.last()?.toIntOrNull() ?: 0
-                        } catch (e: Exception){
-                            val errorMessage = "Seletor Erro ao adicionar linha seletor $file: ${e.message}"
-                            Log.e("Seletor", errorMessage)
-                            Log.e("Seletor", file.toString())
-                            Toast.makeText(requireContext(), "Seletor Erro ao adicionar linha seletor $file", Toast.LENGTH_SHORT).show()
-                            Toast.makeText(requireContext(), "$file", Toast.LENGTH_LONG).show()
-                            lastId=0
-                        }
-                    try {
-                        // Abre o arquivo para escrita e adiciona a nova linha
-                        val newId = synchronized(this) { ++lastId }
-
-                        val fileWriter = FileWriter(file, true)
-                        val bufferWriter= BufferedWriter(fileWriter)
-                        bufferWriter.write(newLine)
-                        val lines = file.readLines()
-                        if(lines.isNotEmpty()){
-                            bufferWriter.write(",${newId}")
-                        }
-
-                        bufferWriter.newLine()
-                        bufferWriter.flush()
-                        bufferWriter.close()
-                        fileWriter.close()
-                        // Exibe uma mensagem de sucesso em caso de escrita bem-sucedida
-                        activity?.runOnUiThread {
-                            Toast.makeText(requireContext(), "Linha adicionada com sucesso", Toast.LENGTH_SHORT).show()
-                            Toast.makeText(requireContext(), file.toString(), Toast.LENGTH_SHORT).show()
-                        }
-
-                    } catch (e: Exception) {
-                        // Exibe uma mensagem de erro em caso de falha na escrita
-                        Log.e(TAG, "Error writing to file", e)
-//                        activity?.runOnUiThread {
-                            Toast.makeText(requireContext(), "Erro ao adicionar linha $file", Toast.LENGTH_SHORT).show()
-                            Toast.makeText(requireContext(), "$file", Toast.LENGTH_LONG).show()
-//                        }
-                    } finally {
-                        semaphore.release()
-                    }
-                    }
-                }
-            } ?: run {
-                // Exibe uma mensagem de erro caso o arquivo não tenha sido selecionado
-                Toast.makeText(requireContext(), "Selecione um arquivo antes de adicionar uma linha", Toast.LENGTH_SHORT).show()
-            }
-
-        }
-
-
-//fun writeTxt(newLine: String) {
-//    // Verifica se o arquivo foi selecionado
-//    selectedFile?.let { file ->
-//        CoroutineScope(Dispatchers.IO).launch {
-//            activity?.runOnUiThread {
-//                try {
-//                    val newId = synchronized(this) {
-//                        val lines = file.readLines()
-//                        val lastId = lines.lastOrNull()?.split(",")?.last()?.toIntOrNull() ?: 0
-//                        lastId + 1
-//                    }
-//
-//                    // Cria um novo arquivo temporário
-//                    val tempFile = File(file.parent, "temp.txt")
-//                    tempFile.createNewFile()
-//
-//                    // Copia o conteúdo existente para o novo arquivo temporário
-//                    val fileReader = FileReader(file)
-//                    val tempWriter = FileWriter(tempFile)
-//                    val bufferedReader = BufferedReader(fileReader)
-//                    val bufferedWriter = BufferedWriter(tempWriter)
-//
-//                    bufferedReader.use { reader ->
-//                        bufferedWriter.use { writer ->
-//                            var line: String?
-//                            while (reader.readLine().also { line = it } != null) {
-//                                writer.write(line)
-//                                writer.newLine()
-//                            }
-//                        }
-//                    }
-//
-//                    // Adiciona a nova linha ao novo arquivo temporário
-//                    bufferedWriter.write(newLine)
-//                    if (tempFile.length() > 0) {
-//                        bufferedWriter.write(",${newId}")
-//                    }
-//                    bufferedWriter.newLine()
-//
-//                    bufferedWriter.close()
-//                    bufferedReader.close()
-//
-//                    // Substitui o arquivo original pelo novo arquivo temporário
-//                    tempFile.renameTo(file)
-//
-//                    // Exibe uma mensagem de sucesso em caso de escrita bem-sucedida
-//                    activity?.runOnUiThread {
-//                        Toast.makeText(requireContext(), "Linha adicionada com sucesso", Toast.LENGTH_SHORT).show()
-//                        Toast.makeText(requireContext(), file.toString(), Toast.LENGTH_SHORT).show()
-//                    }
-//                } catch (e: Exception) {
-//                    // Exibe uma mensagem de erro em caso de falha na escrita
-//                    Log.e(TAG, "Error writing to file", e)
-//                    Toast.makeText(requireContext(), "Erro ao adicionar linha $file", Toast.LENGTH_SHORT).show()
-//                    Toast.makeText(requireContext(), "$file", Toast.LENGTH_LONG).show()
-//                }
-//            }
+//        if (selectedFile!==null){
+//            selectedFileTextView.text="Arquivo selecionado: ${selectedFile?.name}"
 //        }
-//    } ?: run {
-//        // Exibe uma mensagem de erro caso o arquivo não tenha sido selecionado
-//        Toast.makeText(requireContext(), "Selecione um arquivo antes de adicionar uma linha", Toast.LENGTH_SHORT).show()
-//    }
-//}
+
 
 
 
@@ -306,54 +229,6 @@ class HomeFragment : Fragment() {
             return path
         }
 
-//          functional but not the newest code, api 29
-//        val chooseFile = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-//            if (result.resultCode == Activity.RESULT_OK) {
-//                val uri = result.data?.data
-//                if (uri != null) {
-//                    val inputStream = requireContext().contentResolver.openInputStream(uri)
-//                    if (inputStream != null) {
-//                        val fileName = getFileName(uri)
-//                        if (fileName != null) {
-////                            selectedFile = File(requireContext().cacheDir, fileName)
-////                            selectedFile = File(requireContext().getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
-//                            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-//                            selectedFile = File(downloadsDir, fileName)
-//                            selectedFile!!.outputStream().use { fileOutputStream ->
-//                                inputStream.copyTo(fileOutputStream)
-//                            }
-//                            selectedFileTextView.text = "Arquivo selecionado: $fileName"
-//
-//                        } else {
-//                            // Não foi possível obter o nome do arquivo original usando a abordagem alternativa
-//                        }
-//                    } else {
-//                        // Não foi possível obter o InputStream do arquivo selecionado
-//                    }
-//                }
-//            }
-//        }
-
-        //
-//        fun selectFile() {
-//            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
-//                type = "text/plain"
-//            }
-//            chooseFile.launch(intent)
-//        }
-
-//        fun saveFileToAppStorage(inputStream: InputStream, fileName: String) {
-//            val outputDir = requireContext().getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS)
-//            if (outputDir != null) {
-//                selectedFile = File(outputDir, fileName)
-//                selectedFile!!.outputStream().use { outputStream ->
-//                    inputStream.copyTo(outputStream)
-//                }
-//            } else {
-//                // Não foi possível obter o diretório de saída adequado
-//                // Lide com o erro aqui
-//            }
-//        }
 
         //api 30
         val chooseFile = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -374,6 +249,7 @@ class HomeFragment : Fragment() {
 //                                inputStream.copyTo(fileOutputStream)
 //                            }
                             selectedFileTextView.text = "Arquivo selecionado: $fileName"
+//                            selectedFileTextView.text = "Arquivo selecionado:${selectedFile}"
 
                         } else {
                             // Não foi possível obter o nome do arquivo original usando a abordagem alternativa
@@ -413,12 +289,15 @@ class HomeFragment : Fragment() {
 
 
     //CAUTION RETURN
+
         if (selectedFile == null) {
             AlertDialog.Builder(context)
                 .setMessage("Por favor escolha ou crie um arquivo de salvamento primeiro!")
                 .setPositiveButton("Ok", null)
                 .show()
             return
+        } else {
+            selectedFileTextView.text = "Arquivo selecionado: ${selectedFile?.name}"
         }
     }
 
@@ -442,19 +321,21 @@ class HomeFragment : Fragment() {
         _binding = null
     }
 ////
-//    override fun onSaveInstanceState(outState: Bundle) {
-////        outState.putParcelable("myLocation",gpsObserver)
-//
-//        super.onSaveInstanceState(outState)
-//        outState.putSerializable("myFilePath",selectedFile?.absolutePath)
-//    }
-//
-//    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-//    override fun onViewStateRestored(savedInstanceState: Bundle?) {
-//        super.onViewStateRestored(savedInstanceState)
-////     selectedFile= savedInstanceState?.getSerializable("myFilePath") as? File
-//        myFilePath= savedInstanceState?.getString("myFilePath")
-//        selectedFile = myFilePath?.let{File(it)}
-//
-//    }
+    override fun onSaveInstanceState(outState: Bundle) {
+//        outState.putParcelable("myLocation",gpsObserver)
+
+        super.onSaveInstanceState(outState)
+        outState.putSerializable("myFilePath",selectedFile?.absolutePath)
+//    outState.putString("myFilePath",selectedFile?.absolutePath)
+//    outState.putSerializable("myFilePath",selectedFile)
+    }
+
+
+    override fun onViewStateRestored(savedInstanceState: Bundle?) {
+        super.onViewStateRestored(savedInstanceState)
+//     selectedFile= savedInstanceState?.getSerializable("myFilePath") as? File
+        myFilePath= savedInstanceState?.getString("myFilePath")
+        selectedFile = myFilePath?.let{File(it)}
+
+    }
 }
