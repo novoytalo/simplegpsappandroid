@@ -120,17 +120,21 @@ class SlideshowFragment : Fragment() {
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
                     val values = line?.split(",")?.map { it.trim() }
-
                     val latitude = values?.get(0)?.toDoubleOrNull()
                     val longitude = values?.get(1)?.toDoubleOrNull()
                     val accuracy = values?.get(2)?.toDoubleOrNull()
                     val time = values?.get(3)?.toDoubleOrNull()
                     val altitude = values?.get(4)?.toDoubleOrNull()
-                    val id = values?.get(5)?.toIntOrNull()
+                    val altitudeacurracy= values?.get(5)?.toDoubleOrNull()
+                    val velocidade= values?.get(6)?.toDoubleOrNull()
+                    val velociadadeacurracy= values?.get(7)?.toDoubleOrNull()
+                    val bearing= values?.get(8)?.toDoubleOrNull()
+                    val id = values?.get(9)?.toIntOrNull()
 
-                    if (latitude != null && longitude != null && accuracy != null && time != null && altitude != null && id != null) {
+                    if (latitude != null && longitude != null && accuracy != null && time != null && altitude != null && altitudeacurracy != null && velocidade != null && velociadadeacurracy != null && bearing != null && id != null) {
                         val point = GeoPoint(latitude, longitude)
                         val item = OverlayItem(
+                            // add
                             "Ponto $id",
                             "Latitude: $latitude, Longitude: $longitude\nAccuracy: $accuracy\nTime: $time\nAltitude: $altitude",
                             point

@@ -30,9 +30,9 @@ class HomeViewModel (application: Application) : AndroidViewModel(application) {
 //        priority = Priority.PRIORITY_HIGH_ACCURACY
 //        maxWaitTime = 100
 //    }
-     var  locationInterval:Long = 1000
-     var locationFastestInterval:Long = 50
-     var locationMaxWaitTime:Long = 200
+     var  locationInterval:Long = 500
+     var locationFastestInterval:Long = 20
+     var locationMaxWaitTime:Long = 500
     private val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, locationInterval)
     .setWaitForAccurateLocation(true)
     .setMinUpdateIntervalMillis(locationFastestInterval)

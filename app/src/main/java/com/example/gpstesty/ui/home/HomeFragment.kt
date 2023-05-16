@@ -10,6 +10,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.provider.DocumentsContract
@@ -23,6 +24,7 @@ import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
@@ -112,9 +114,11 @@ class HomeFragment : Fragment() {
                 activity?.runOnUiThread{
                     semaphore.acquire()
                     var lastId: Int =0
+                    val idCurrentLine: TextView = requireView().findViewById(R.id.idCurrentLine)
 
                     try {
                         lastId= file.readLines().lastOrNull()?.split(",")?.last()?.toIntOrNull() ?: 0
+
                     } catch (e: Exception){
                         val errorMessage = "Seletor Erro ao adicionar linha seletor $file: ${e.message}"
                         Log.e("Seletor", errorMessage)
@@ -125,8 +129,9 @@ class HomeFragment : Fragment() {
                     }
                     try {
                         // Abre o arquivo para escrita e adiciona a nova linha
-                        val newId = synchronized(this) { ++lastId }
 
+                        val newId = synchronized(this) { ++lastId }
+                        idCurrentLine.text= "Id Linha Atual:$lastId ${2} Ooo"
                         val fileWriter = FileWriter(file, true)
                         val bufferWriter= BufferedWriter(fileWriter)
                         bufferWriter.write(newLine)
@@ -182,11 +187,13 @@ class HomeFragment : Fragment() {
             var latitude = it.latitude
             var longitude = it.longitude
             val accuracy = it.accuracy
-            textView.text = "latitude: $latitude,Logintude: $longitude,accuracy: $accuracy "
+//            val a =it.speed
+            textView.text = "latitude: $latitude,longitude: $longitude,accuracy: $accuracy "
         }
         return root
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("SetTextI18n")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -202,6 +209,7 @@ class HomeFragment : Fragment() {
         //create a file
         val createFileButton: Button = view.findViewById(R.id.createFileButton)
         val selectedFileTextView: TextView = view.findViewById(R.id.selectedFileTextView)
+
 //        if (selectedFile!==null){
 //            selectedFileTextView.text="Arquivo selecionado: ${selectedFile?.name}"
 //        }
@@ -215,7 +223,14 @@ class HomeFragment : Fragment() {
             selectedFile = FileUtilsss().createFile()
             selectedFileTextView.text="Arquivo selecionado: ${selectedFile?.name}"
             //criando a primeira linha de colunas com os dados
-            val data = "latitude,logintude,acurracy,time,altitude,id"
+            val apiLevel = Build.VERSION.SDK_INT
+            var data= ""
+            if (apiLevel >= 26) {
+                data = "latitude,logintude,acurracy,time,altitude,altitude_acurracy,velocidade,velociadade_acurracy,bearing,id"
+            } else {
+                data = "latitude,logintude,acurracy,time,altitude,velocidade,id"
+            }
+//            val data = "latitude,logintude,acurracy,time,altitude,velocidade,id"
             writeTxt(data)
 
         }
@@ -282,7 +297,16 @@ class HomeFragment : Fragment() {
         val addToLineToFileButton: Button = view.findViewById(R.id.addNewLineButton)
 
         addToLineToFileButton.setOnClickListener {
-            val data = "${gpsObserver.latitude},${gpsObserver.longitude},${gpsObserver.accuracy},${gpsObserver.time},${gpsObserver.altitude}"
+            val apiLevel = Build.VERSION.SDK_INT
+            var data =""
+            if (apiLevel >= 26) {
+                data = "${gpsObserver.latitude},${gpsObserver.longitude},${gpsObserver.accuracy},${gpsObserver.time},${gpsObserver.altitude},${gpsObserver.verticalAccuracyMeters},${gpsObserver.speed},${gpsObserver.speedAccuracyMetersPerSecond}, ${gpsObserver.bearing} "
+            } else {
+                data = "${gpsObserver.latitude},${gpsObserver.longitude},${gpsObserver.accuracy},${gpsObserver.time},${gpsObserver.altitude},${gpsObserver.speed}"
+            }
+
+
+//            val data = "${gpsObserver.latitude},${gpsObserver.longitude},${gpsObserver.accuracy},${gpsObserver.time},${gpsObserver.altitude},${gpsObserver.speed},${gpsObserver.speedAccuracyMetersPerSecond}"
             writeTxt(data)
 
         }
@@ -290,15 +314,15 @@ class HomeFragment : Fragment() {
 
     //CAUTION RETURN
 
-        if (selectedFile == null) {
-            AlertDialog.Builder(context)
-                .setMessage("Por favor escolha ou crie um arquivo de salvamento primeiro!")
-                .setPositiveButton("Ok", null)
-                .show()
-            return
-        } else {
-            selectedFileTextView.text = "Arquivo selecionado: ${selectedFile?.name}"
-        }
+//        if (selectedFile == null) {
+//            AlertDialog.Builder(context)
+//                .setMessage("Por favor escolha ou crie um arquivo de salvamento primeiro!")
+//                .setPositiveButton("Ok", null)
+//                .show()
+//            return
+//        } else {
+//            selectedFileTextView.text = "Arquivo selecionado: ${selectedFile?.name}"
+//        }
     }
 
     override fun onResume() {

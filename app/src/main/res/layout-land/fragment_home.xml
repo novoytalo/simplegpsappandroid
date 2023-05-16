@@ -43,10 +43,11 @@
         android:onClick="selectFile"
         android:text="Select File"
         app:layout_constraintBottom_toTopOf="@+id/text_home"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.049"
+        app:layout_constraintEnd_toStartOf="@+id/addNewLineButton"
+        app:layout_constraintHorizontal_bias="0.042"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/addNewLineButton" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.662" />
 
     <Button
         android:id="@+id/addNewLineButton"
@@ -56,10 +57,10 @@
 
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.492"
+        app:layout_constraintHorizontal_bias="0.464"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.061" />
+        app:layout_constraintVertical_bias="0.056" />
 
     <TextView
         android:id="@+id/selectedFileTextView"
@@ -76,15 +77,14 @@
         android:id="@+id/idCurrentLine"
         android:layout_width="162dp"
         android:layout_height="84dp"
-        android:layout_marginStart="24dp"
-        android:layout_marginTop="212dp"
         android:ellipsize="end"
         android:maxLines="2"
         android:textAlignment="center"
         android:textSize="20sp"
+
+        app:layout_constraintBottom_toTopOf="@+id/text_home"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.235"
-        app:layout_constraintStart_toEndOf="@+id/selectFileButton"
+        app:layout_constraintStart_toEndOf="@+id/addNewLineButton"
         app:layout_constraintTop_toTopOf="parent" />
 
 
