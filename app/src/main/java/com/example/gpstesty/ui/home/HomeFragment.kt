@@ -131,7 +131,7 @@ class HomeFragment : Fragment() {
                         // Abre o arquivo para escrita e adiciona a nova linha
 
                         val newId = synchronized(this) { ++lastId }
-                        idCurrentLine.text= "Id Linha Atual:$lastId ${2} Ooo"
+                        idCurrentLine.text= "ID da Linha Atual: $lastId"
                         val fileWriter = FileWriter(file, true)
                         val bufferWriter= BufferedWriter(fileWriter)
                         bufferWriter.write(newLine)
